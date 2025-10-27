@@ -54,25 +54,78 @@ function initializeAudio() {
     if (audioUnlocked) return;
     
     try {
-        // Create and preload audio
+        // Create and preload audio with proper attributes for mobile
         timerSound = new Audio('timerSound.mp3');
-        timerSound.volume = soundVolume;
+        timerSound.preload = 'auto';
+        timerSound.volume = 1.0; // Set to max for reliable mobile playback
+        
+        // For iOS, ensure audio plays even when device is on silent
+        // iOS respects silent mode for web audio, so we can only try
+        console.log('Audio file loading: timerSound.mp3');
+        
+        console.log('Creating audio object, volume set to:', timerSound.volume);
+        
+        // Load the audio file
+        timerSound.load();
         
         // Unlock audio for mobile browsers by playing and pausing immediately
         const playPromise = timerSound.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
+                console.log('Audio play promise resolved - unlocking');
                 timerSound.pause();
                 timerSound.currentTime = 0;
                 audioUnlocked = true;
-                console.log('Audio unlocked for mobile playback');
+                timerSound.volume = soundVolume; // Apply user's volume setting after unlock
+                console.log('Audio unlocked for mobile playback, final volume:', timerSound.volume);
+                
+                // Test sound automatically after unlock (run testSound() manually if needed)
+                // setTimeout(() => testSound(), 1000);
             }).catch(error => {
-                console.log('Audio unlock error:', error);
+                console.error('Audio unlock error:', error.name, error.message);
             });
+        } else {
+            // If no promise returned, assume it's unlocked
+            audioUnlocked = true;
+            console.log('Audio object created (no promise returned)');
         }
     } catch (error) {
-        console.log('Error initializing audio:', error);
+        console.error('Error initializing audio:', error);
     }
+}
+
+// Test sound function - exposed globally for debugging
+window.testSound = function() {
+    if (timerSound && audioUnlocked) {
+        console.log('Testing sound...');
+        timerSound.volume = 1.0;
+        timerSound.currentTime = 0;
+        timerSound.play().then(() => {
+            console.log('Test sound played successfully');
+        }).catch(error => {
+            console.error('Test sound error:', error.name, error.message);
+        });
+    } else {
+        console.log('Audio not initialized. Timer sound:', !!timerSound, 'Audio unlocked:', audioUnlocked);
+    }
+}
+
+// --- Vibration Functions ---
+function vibrateTimerEnd() {
+    // Vibrate pattern: vibrate-200ms, pause-100ms, vibrate-200ms, pause-100ms, vibrate-200ms
+    const pattern = [200, 100, 200, 100, 200];
+    
+    if ('vibrate' in navigator) {
+        navigator.vibrate(pattern);
+        console.log('Vibration triggered');
+    } else {
+        console.log('Vibration API not supported');
+    }
+}
+
+// Test vibration function
+window.testVibration = function() {
+    vibrateTimerEnd();
 }
 
 // --- Wake Lock Functions ---
@@ -205,15 +258,28 @@ function updateProgressBar() {
 }
 
 function handlePhaseEnd() {
+    // Vibrate when timer ends (works even on silent mode)
+    vibrateTimerEnd();
+    
     // Play sound when timer ends
     if (timerSound && audioUnlocked) {
-        timerSound.volume = soundVolume;
+        console.log('Attempting to play sound, volume:', soundVolume);
+        timerSound.volume = 1.0; // Force max volume for mobile
         timerSound.currentTime = 0; // Reset to beginning
-        timerSound.play().catch(error => {
-            console.log('Could not play sound:', error);
-        });
+        
+        const playPromise = timerSound.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                console.log('Sound playing successfully');
+            }).catch(error => {
+                console.error('Could not play sound:', error.name, error.message);
+                // Retry with lower volume
+                timerSound.volume = soundVolume;
+                timerSound.play().catch(err => console.error('Retry failed:', err));
+            });
+        }
     } else {
-        console.log('Audio not initialized yet');
+        console.log('Audio not initialized yet. Timer sound:', !!timerSound, 'Audio unlocked:', audioUnlocked);
     }
 
     if (currentPhase === 'pomodoro') {
@@ -314,6 +380,7 @@ function applyCustomSettings() {
         // Update timer sound volume if it exists
         if (timerSound) {
             timerSound.volume = soundVolume;
+            console.log('Volume updated to:', soundVolume);
         }
         
         // Save to localStorage
