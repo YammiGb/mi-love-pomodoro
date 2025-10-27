@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rirenedoro Timer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Full screen progress bar background -->
+    <div id="progress-bar-fullscreen" class="progress-bar-fullscreen"></div>
+    
+    <div class="timer-app">
+
+        <div id="settings-panel" class="custom-settings hidden">
+            <h2>Customize Time (Minutes)</h2>
+            <label>Focus: <input type="number" id="custom-pomodoro" value="25" min="1"></label>
+            <label>Short Break: <input type="number" id="custom-shortBreak" value="5" min="1"></label>
+            <label>Long Break: <input type="number" id="custom-longBreak" value="15" min="1"></label>
+            <label>Intervals before Long Break: <input type="number" id="custom-intervals" value="4" min="1"></label>
+            <label>Sound Volume: <input type="range" id="custom-volume" min="0" max="100" value="50"></label>
+            <button id="apply-btn">Apply Settings</button>
+        </div>
+
+        <div id="analytics-panel" class="custom-settings hidden analytics-panel">
+            <button id="back-btn" class="back-arrow-btn">←</button>
+            <h2>Analytics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Total Pomodoros</div>
+                    <div class="stat-value" id="total-pomodoros">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Today's Pomodoros</div>
+                    <div class="stat-value" id="today-pomodoros">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Total Focus Time</div>
+                    <div class="stat-value" id="total-time">0h</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Best Streak</div>
+                    <div class="stat-value" id="best-streak">0 days</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Last 7 Days</h3>
+                <canvas id="stats-chart"></canvas>
+            </div>
+            <button id="reset-stats-btn">Reset Stats</button>
+        </div>
+        
+        <div class="main-timer">
+            <!-- Task Title above timer -->
+            <div class="current-task-header">
+                <h1 id="app-title" class="current-task-title">Rirenedoro</h1>
+                <div id="task-progress" class="task-progress hidden">1/2</div>
+            </div>
+
+            <div class="modes">
+                <button id="pomodoro-btn" class="active">Pomodoro</button>
+                <button id="shortBreak-btn">Short Break</button>
+                <button id="longBreak-btn">Long Break</button>
+            </div>
+    
+            <div id="timer-display" class="timer">25:00</div>
+    
+            <div class="controls">
+                <button id="start-btn">START</button>
+                
+                <button id="analytics-btn" class="settings-icon">
+                    <img src="statIcon.png" alt="Analytics" class="settings-img">
+                </button>
+                
+                <button id="reset-btn" class="icon-button">
+                    <img src="restartIcon.png" alt="Reset" class="icon-img">
+                </button>
+                
+                <button id="settings-btn" class="settings-icon">
+                    <img src="settingsIcon.png" alt="Settings" class="settings-img">
+                </button>
+            </div>
+
+            <!-- Task details below timer -->
+            <div id="task-details" class="task-details-container hidden">
+                <!-- Task details will be displayed here -->
+            </div>
+
+            <!-- Tasks Panel -->
+            <div id="tasks-panel" class="tasks-panel">
+                <h2>
+                    <span>Tasks</span>
+                    <button id="add-task-trigger" class="add-task-trigger">+ Add task</button>
+                </h2>
+                
+                <div id="tasks-list" class="tasks-list">
+                    <!-- Tasks will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task Modal -->
+        <div id="add-task-modal" class="custom-settings hidden">
+            <h2>Add New Task</h2>
+            <div class="task-form">
+                <label class="task-form-label">
+                    <span>Task Title</span>
+                    <input type="text" id="task-title" placeholder="Enter task title..." maxlength="100">
+                </label>
+                <label class="task-form-label">
+                    <span>Pomodoros Needed</span>
+                    <input type="number" id="task-pomodoros" placeholder="1" min="1" value="1">
+                </label>
+                <label class="task-form-label">
+                    <span>Due Date (Optional)</span>
+                    <input type="date" id="task-due-date">
+                </label>
+                <label class="task-form-label">
+                    <span>Priority</span>
+                    <select id="task-priority">
+                        <option value="low">Low Priority</option>
+                        <option value="medium" selected>Medium Priority</option>
+                        <option value="high">High Priority</option>
+                    </select>
+                </label>
+                <div class="task-form-buttons">
+                    <button id="cancel-task-btn" class="cancel-task-btn">Cancel</button>
+                    <button id="add-task-btn" class="add-task-btn">Add Task</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Your configuration -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase integration -->
+    <script src="supabase-integration.js"></script>
+    
+    <!-- Tasks functionality -->
+    <script src="tasks.js"></script>
+    
+    <!-- Your main script (keep this last) -->
+    <script src="script.js"></script>
+</body>
+</html>

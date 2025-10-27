@@ -1,0 +1,970 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    background-color: #3179b8;
+    transition: background-color 0.5s ease;
+    color: white;
+    overflow-x: hidden;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* App Header Styling */
+.app-header {
+    width: 100%;
+    padding: 20px 40px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    background: rgba(49, 121, 184, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.app-branding {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 0;
+    text-align: left;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 2px;
+}
+
+.timer-app {
+    padding: 30px; 
+    border-radius: 15px;
+    background: transparent;
+    width: 90%;
+    max-width: 800px;
+    position: relative;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    margin-top: 0;
+    z-index: 1;
+}
+
+/* --- Title/Header Structure --- */
+header {
+    display: block; 
+    margin-bottom: 15px; 
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin: 0; 
+    text-align: center; 
+}
+
+/* Current Task Header */
+.current-task-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.current-task-title {
+    font-size: 3.5rem;
+    margin: 0;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.task-progress {
+    font-size: 1.2rem;
+    color: white;
+    margin-top: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.task-progress.hidden {
+    display: none;
+}
+
+/* Task Details Container */
+.task-details-container {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    text-align: left;
+}
+
+.task-details-container.hidden {
+    display: none;
+}
+
+.task-details-item {
+    margin-bottom: 10px;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.task-details-label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+/* --- Customization Panel (Pop-up) --- */
+.custom-settings {
+    position: absolute;
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2000; 
+    
+    width: 90%;
+    max-width: 450px;
+    padding: 25px;
+    border-radius: 10px;
+    
+    background: white; 
+    color: #333; 
+    
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); 
+    
+    display: flex; 
+    flex-direction: column;
+    gap: 12px;
+}
+
+.custom-settings.hidden {
+    display: none;
+}
+
+.custom-settings h2 {
+    font-size: 1.4rem;
+    margin: 0 0 10px 0;
+    text-align: center;
+}
+
+.analytics-panel h2 {
+    margin-top: 15px;
+}
+
+.custom-settings label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+    padding: 3px 0;
+}
+
+.custom-settings input {
+    width: 60px;
+    padding: 8px;
+    border: 1px solid #ccc; 
+    border-radius: 5px;
+    text-align: center;
+    background: #f8f8f8;
+    color: #333;
+}
+
+.custom-settings input[type="range"] {
+    width: 120px;
+}
+
+#apply-btn {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background: #3179b8; 
+    color: white; 
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Main Timer Controls --- */
+
+.modes {
+    margin-bottom: 25px; 
+    display: flex;
+    justify-content: center; 
+    gap: 8px;
+}
+
+.modes button {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+.modes button.active {
+    /* Color matching the active button in the image */
+    background: rgba(0, 0, 0, 0.3); 
+    color: white;
+    font-weight: bold;
+}
+
+.timer {
+    font-size: 8rem;
+    font-weight: bold;
+    margin: 0 0 20px 0; 
+    text-align: center; 
+    letter-spacing: 2px;
+    word-wrap: break-word;
+    max-width: 100%;
+    transition: color 0.3s ease;
+}
+
+.timer.blink {
+    animation: blink 0.5s infinite;
+    color: #a8e6cf !important; /* Pastel green */
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
+
+.controls {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Style for START button (Text Button) */
+#start-btn { 
+    background: white;
+    color: #D95550;
+    border: none;
+    padding: 9px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s;
+}
+
+.controls button:active {
+    transform: scale(0.98);
+}
+
+/* --- Styling for ALL Icon Buttons (#reset-btn and .settings-icon) --- */
+#reset-btn, 
+.controls .settings-icon { 
+    /* Unified style to ensure no container, padding, or shadow */
+    background: none; 
+    border: none;
+    box-shadow: none; 
+    cursor: pointer;
+    padding: 0; /* REMOVE ALL PADDING */
+    margin: 0; /* REMOVE ALL MARGINS */
+    
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+}
+
+/* Add margin back to the last element to separate it from its neighbor */
+.controls .settings-icon {
+    /* Adds the small space required between the two icons */
+    margin-left: 10px; 
+}
+
+/* Style the images inside the icon buttons */
+.icon-img,
+.settings-img {
+    /* CRITICAL FIX: Ensure both images are the same size */
+    width: 25px; 
+    height: 25px; 
+    display: block; 
+    transition: transform 0.1s ease; 
+    
+    /* Apply a slight padding to the image itself to act as the click area */
+    padding: 7px;
+}
+
+/* Hover effect applied to both icon images */
+.controls button:hover .icon-img,
+.controls button:hover .settings-img,
+.controls button:hover .analytics-icon {
+    transform: scale(1.1); 
+}
+
+/* Analytics Panel Styling */
+.analytics-panel {
+    max-width: 500px;
+}
+
+.analytics-icon {
+    font-size: 20px;
+    display: block;
+    transition: transform 0.1s ease;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.stat-item {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #3179b8;
+}
+
+.back-arrow-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+    padding: 5px;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.back-arrow-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.chart-container {
+    margin: 20px 0;
+    background: rgba(0, 0, 0, 0.02);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.chart-container h3 {
+    font-size: 1rem;
+    margin: 0 0 10px 0;
+    color: #666;
+    text-align: center;
+}
+
+#stats-chart {
+    width: 100%;
+    height: 150px;
+    max-height: 150px;
+}
+
+#reset-stats-btn {
+    padding: 8px 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    width: 100%;
+}
+
+.main-timer {
+    width: 100%;
+    max-width: 600px;
+}
+
+.progress-bar-fullscreen {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: rgba(0, 0, 0, 0.1);
+    z-index: 0;
+    transition: height 1s linear, background-color 0.5s ease;
+    pointer-events: none;
+}
+
+/* Tasks Panel Styling */
+.tasks-panel {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    background: transparent;
+    box-shadow: none;
+    z-index: 1000;
+    padding: 20px;
+    border-radius: 10px;
+    overflow-y: auto;
+}
+
+.tasks-panel.hidden {
+    display: none;
+}
+
+.tasks-panel:not(.hidden) {
+    display: block;
+}
+
+.task-progress {
+    font-size: 1.2rem;
+    color: white;
+    margin-top: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.task-progress.hidden {
+    display: none;
+}
+
+.complete-task-btn {
+    margin-top: 15px;
+    padding: 8px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background 0.2s;
+}
+
+.complete-task-btn:hover {
+    background: #218838;
+}
+
+.complete-task-btn.hidden {
+    display: none;
+}
+
+.task-pomodoros-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #3179b8;
+    color: white;
+}
+
+.close-tasks-btn {
+    display: none;
+}
+
+.tasks-icon {
+    font-size: 20px;
+    display: block;
+}
+
+.tasks-panel h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    padding: 0;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.add-task-trigger {
+    background: #3179b8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background 0.2s;
+}
+
+.add-task-trigger:hover {
+    background: #2a6199;
+}
+
+.task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.task-form-label {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px;
+    text-align: left;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+}
+
+.task-form-label > span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    text-align: left;
+    width: 100%;
+    align-self: flex-start;
+}
+
+.task-form input,
+.task-form select {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    text-align: left !important;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.task-form input:focus,
+.task-form select:focus {
+    outline: none;
+    border-color: #3179b8;
+}
+
+.task-form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.cancel-task-btn,
+.add-task-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.cancel-task-btn {
+    background: #e0e0e0;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-task-btn:hover {
+    background: #d0d0d0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.add-task-btn {
+    background: #3179b8;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.add-task-btn:hover {
+    background: #2a6199;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+
+.tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.task-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.task-item:hover {
+    opacity: 0.8;
+}
+
+.task-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+}
+
+.task-title-date {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.task-due-date {
+    font-size: 11px;
+    margin-top: 2px;
+    text-align: left;
+    color: white;
+    opacity: 0.9;
+}
+
+.task-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 28px;
+    margin-top: -4px;
+    justify-content: space-between;
+    overflow: hidden;
+    max-height: 300px;
+    opacity: 1;
+    padding: 8px 0;
+    margin-bottom: 4px;
+    transition: max-height 0.4s ease-out, 
+                opacity 0.35s ease-out, 
+                padding 0.4s ease-out,
+                margin 0.4s ease-out;
+}
+
+.task-details.closed {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.task-details-content {
+    display: flex;
+    gap: 6px;
+}
+
+.task-item.completed {
+    opacity: 0.5;
+    animation: fadeOut 0.5s ease;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
+.task-title.completed {
+    text-decoration: line-through;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.task-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    border-radius: 50%;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: transparent;
+    position: relative;
+}
+
+.task-checkbox:checked {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.task-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Priority-based checkbox borders */
+.task-item.high .task-checkbox {
+    border-color: #fca5a5; /* Pastel red */
+}
+
+.task-item.medium .task-checkbox {
+    border-color: #fdb462; /* Pastel orange */
+}
+
+.task-item.low .task-checkbox {
+    border-color: #a8e6cf; /* Pastel green */
+}
+
+.task-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Remove .task-due styling as it's no longer used */
+
+.task-title {
+    color: white;
+    text-align: left;
+    width: 100%;
+}
+
+.task-title.completed {
+    text-decoration: line-through;
+}
+
+
+.task-priority-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.task-priority-badge.high {
+    background: #fecaca;
+    color: #7f1d1d;
+}
+
+.task-priority-badge.medium {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+.task-priority-badge.low {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.delete-task-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.delete-task-btn:hover {
+    background: #dc2626;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    body {
+        overflow-x: hidden;
+        width: 100%;
+    }
+    
+    .timer-app {
+        padding: 20px 10px;
+        width: 95%;
+        max-width: 100%;
+        gap: 15px;
+    }
+    
+    .main-timer {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .tasks-panel {
+        width: 100%;
+        max-width: 100%;
+        padding: 15px 5px;
+    }
+    
+    .tasks-panel h2 {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        max-width: 100%;
+    }
+    
+    .controls {
+        max-width: 100%;
+    }
+    
+    .add-task-trigger {
+        width: auto;
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .current-task-title {
+        font-size: 2.5rem;
+    }
+    
+    .timer {
+        font-size: 5rem;
+        letter-spacing: 1px;
+    }
+    
+    .modes {
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .modes button {
+        font-size: 0.7rem;
+        padding: 6px 8px;
+    }
+    
+    .controls {
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    #start-btn {
+        padding: 8px 18px;
+        font-size: 0.85rem;
+    }
+    
+    .icon-img,
+    .settings-img {
+        width: 40px;
+        height: 40px;
+        padding: 10px;
+    }
+    
+    #reset-btn,
+    .settings-icon {
+        min-width: 60px;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .task-header {
+        gap: 8px;
+    }
+    
+    .task-title {
+        font-size: 0.9rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .task-due-date {
+        font-size: 10px;
+    }
+    
+    .task-details {
+        margin-left: 0;
+        padding-left: 28px;
+    }
+    
+    .task-details-content {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .task-checkbox {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+    
+    .task-item {
+        padding: 12px 5px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    #stats-chart {
+        height: 120px;
+    }
+    
+    /* Modal and form improvements for mobile */
+    .custom-settings {
+        max-width: 95%;
+        padding: 20px 15px;
+    }
+    
+    .task-form-label > span {
+        font-size: 0.85rem;
+    }
+    
+    .task-form input,
+    .task-form select {
+        padding: 10px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .cancel-task-btn,
+    .add-task-btn {
+        padding: 10px 15px;
+        font-size: 13px;
+    }
+}
