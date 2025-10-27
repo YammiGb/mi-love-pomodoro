@@ -115,17 +115,42 @@ function vibrateTimerEnd() {
     // Vibrate pattern: vibrate-200ms, pause-100ms, vibrate-200ms, pause-100ms, vibrate-200ms
     const pattern = [200, 100, 200, 100, 200];
     
-    if ('vibrate' in navigator) {
-        navigator.vibrate(pattern);
-        console.log('Vibration triggered');
-    } else {
-        console.log('Vibration API not supported');
+    try {
+        if ('vibrate' in navigator) {
+            const result = navigator.vibrate(pattern);
+            console.log('Vibration triggered, result:', result);
+            
+            // If vibrate returns false, the pattern is too long or not supported
+            if (result === false) {
+                console.log('Vibration pattern rejected, trying simpler pattern');
+                // Try a simpler pattern as fallback
+                navigator.vibrate(200);
+            }
+        } else {
+            console.log('Vibration API not supported in this browser');
+        }
+    } catch (error) {
+        console.error('Error with vibration:', error);
     }
 }
 
 // Test vibration function
 window.testVibration = function() {
-    vibrateTimerEnd();
+    console.log('Testing vibration...');
+    console.log('navigator.vibrate available:', 'vibrate' in navigator);
+    
+    // Try multiple patterns to see which works
+    if ('vibrate' in navigator) {
+        console.log('Attempting simple vibration (200ms)...');
+        navigator.vibrate(200);
+        
+        setTimeout(() => {
+            console.log('Attempting complex vibration pattern...');
+            vibrateTimerEnd();
+        }, 500);
+    } else {
+        console.log('Vibration API not available');
+    }
 }
 
 // --- Wake Lock Functions ---
@@ -259,7 +284,22 @@ function updateProgressBar() {
 
 function handlePhaseEnd() {
     // Vibrate when timer ends (works even on silent mode)
-    vibrateTimerEnd();
+    console.log('Timer ended - attempting to vibrate');
+    
+    // Try vibration with multiple patterns for better compatibility
+    if ('vibrate' in navigator) {
+        // Try the complex pattern first
+        let result = navigator.vibrate([200, 100, 200, 100, 200]);
+        console.log('Complex vibration pattern result:', result);
+        
+        // If that doesn't work, try simpler
+        if (!result) {
+            console.log('Trying simpler vibration pattern');
+            navigator.vibrate([300, 100, 300]);
+        }
+    } else {
+        console.log('Vibration API not available - likely iOS or unsupported browser');
+    }
     
     // Play sound when timer ends
     if (timerSound && audioUnlocked) {
