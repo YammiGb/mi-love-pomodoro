@@ -12,6 +12,7 @@ let pomodorosCompleted = 0;
 let timeRemaining = TIMES.pomodoro * 60; 
 let isRunning = false;
 let timerInterval;
+let wakeLock = null;
 
 // Session statistics
 let sessionStats = {
@@ -44,8 +45,41 @@ const customInputs = {
 // Sound volume (0 to 1)
 let soundVolume = 0.5;
 
-
 // --- Utility Function: Removed status messages for cleaner UI ---
+
+// --- Wake Lock Functions ---
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake lock activated - screen will stay awake');
+            
+            // Re-request wake lock if it's released (e.g., screen lock)
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake lock released');
+                // Re-request if timer is still running
+                if (isRunning) {
+                    requestWakeLock();
+                }
+            });
+        } else {
+            console.log('Wake Lock API not supported in this browser');
+        }
+    } catch (err) {
+        console.log('Wake lock error:', err.name, err.message);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock) {
+        wakeLock.release().then(() => {
+            wakeLock = null;
+            console.log('Wake lock released');
+        }).catch((err) => {
+            console.log('Error releasing wake lock:', err);
+        });
+    }
+}
 
 // --- Core Logic Functions ---
 
@@ -75,6 +109,9 @@ function startTimer() {
     settingsPanel.classList.add('hidden');
     isRunning = true;
     startBtn.textContent = 'PAUSE';
+    
+    // Request wake lock to keep screen awake
+    requestWakeLock();
 
     timerInterval = setInterval(() => {
         timeRemaining--;
@@ -84,6 +121,7 @@ function startTimer() {
         if (timeRemaining <= 0) {
             clearInterval(timerInterval);
             isRunning = false;
+            releaseWakeLock(); // Release wake lock when timer ends
             handlePhaseEnd();
         }
     }, 1000);
@@ -94,6 +132,9 @@ function pauseTimer() {
     isRunning = false;
     startBtn.textContent = 'START';
     updateProgressBar();
+    
+    // Release wake lock when timer is paused
+    releaseWakeLock();
 }
 
 function resetTimer() {
@@ -514,5 +555,14 @@ window.addEventListener('load', async () => {
         } else {
             console.log('Supabase integration not available - using local storage only');
         }
+    }
+});
+
+// Handle visibility change to re-request wake lock if needed
+document.addEventListener('visibilitychange', async () => {
+    if (!document.hidden && isRunning && !wakeLock) {
+        // Page is visible again, timer is running, but wake lock was released
+        // Re-request wake lock
+        requestWakeLock();
     }
 });
