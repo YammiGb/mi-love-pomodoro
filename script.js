@@ -44,8 +44,36 @@ const customInputs = {
 
 // Sound volume (0 to 1)
 let soundVolume = 0.5;
+let timerSound = null;
+let audioUnlocked = false;
 
 // --- Utility Function: Removed status messages for cleaner UI ---
+
+// --- Audio Functions ---
+function initializeAudio() {
+    if (audioUnlocked) return;
+    
+    try {
+        // Create and preload audio
+        timerSound = new Audio('timerSound.mp3');
+        timerSound.volume = soundVolume;
+        
+        // Unlock audio for mobile browsers by playing and pausing immediately
+        const playPromise = timerSound.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                timerSound.pause();
+                timerSound.currentTime = 0;
+                audioUnlocked = true;
+                console.log('Audio unlocked for mobile playback');
+            }).catch(error => {
+                console.log('Audio unlock error:', error);
+            });
+        }
+    } catch (error) {
+        console.log('Error initializing audio:', error);
+    }
+}
 
 // --- Wake Lock Functions ---
 async function requestWakeLock() {
@@ -178,11 +206,15 @@ function updateProgressBar() {
 
 function handlePhaseEnd() {
     // Play sound when timer ends
-    const timerSound = new Audio('timerSound.mp3');
-    timerSound.volume = soundVolume; // Set volume from settings
-    timerSound.play().catch(error => {
-        console.log('Could not play sound:', error);
-    });
+    if (timerSound && audioUnlocked) {
+        timerSound.volume = soundVolume;
+        timerSound.currentTime = 0; // Reset to beginning
+        timerSound.play().catch(error => {
+            console.log('Could not play sound:', error);
+        });
+    } else {
+        console.log('Audio not initialized yet');
+    }
 
     if (currentPhase === 'pomodoro') {
         pomodorosCompleted++;
@@ -278,6 +310,11 @@ function applyCustomSettings() {
         TIMES.longBreak = newLongBreak;
         LONG_BREAK_TRIGGER = newIntervals;
         soundVolume = newVolume;
+        
+        // Update timer sound volume if it exists
+        if (timerSound) {
+            timerSound.volume = soundVolume;
+        }
         
         // Save to localStorage
         localStorage.setItem('pomodoroSettings', JSON.stringify({
@@ -499,6 +536,9 @@ function toggleAnalyticsPanel() {
 // --- Event Listeners ---
 
 startBtn.addEventListener('click', () => {
+    // Initialize audio on first user interaction (required for mobile)
+    initializeAudio();
+    
     if (isRunning) {
         pauseTimer();
     } else {
