@@ -1,0 +1,35 @@
+{
+  "name": "Rirenedoro Timer",
+  "short_name": "Rirenedoro",
+  "description": "A Pomodoro timer with task management and analytics",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#3179b8",
+  "theme_color": "#3179b8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./statIcon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./statIcon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Start Timer",
+      "short_name": "Start",
+      "description": "Start a new Pomodoro session",
+      "url": "./index.html",
+      "icons": [{ "src": "./statIcon.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

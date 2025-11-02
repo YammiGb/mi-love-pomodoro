@@ -13,6 +13,7 @@ let timeRemaining = TIMES.pomodoro * 60;
 let isRunning = false;
 let timerInterval;
 let wakeLock = null;
+let targetEndTime = null; // Timestamp when timer should end
 
 // Session statistics
 let sessionStats = {
@@ -216,18 +217,29 @@ function startTimer() {
     isRunning = true;
     startBtn.textContent = 'PAUSE';
     
+    // Calculate target end time (timestamp-based for background accuracy)
+    targetEndTime = Date.now() + (timeRemaining * 1000);
+    saveTimerState();
+    
     // Request wake lock to keep screen awake
     requestWakeLock();
 
     timerInterval = setInterval(() => {
-        timeRemaining--;
+        // Calculate actual remaining time based on target end time
+        const now = Date.now();
+        timeRemaining = Math.ceil((targetEndTime - now) / 1000);
+        
+        if (timeRemaining < 0) timeRemaining = 0;
+        
         updateDisplay();
         updateProgressBar();
 
         if (timeRemaining <= 0) {
             clearInterval(timerInterval);
             isRunning = false;
+            targetEndTime = null;
             releaseWakeLock(); // Release wake lock when timer ends
+            clearTimerState();
             handlePhaseEnd();
         }
     }, 1000);
@@ -237,7 +249,9 @@ function pauseTimer() {
     clearInterval(timerInterval);
     isRunning = false;
     startBtn.textContent = 'START';
+    targetEndTime = null;
     updateProgressBar();
+    saveTimerState();
     
     // Release wake lock when timer is paused
     releaseWakeLock();
@@ -248,6 +262,82 @@ function resetTimer() {
     display.classList.remove('blink');
     setPhase(currentPhase);
     startBtn.textContent = 'START';
+    clearTimerState();
+}
+
+// --- Timer State Persistence (for background running) ---
+
+function saveTimerState() {
+    const state = {
+        currentPhase,
+        timeRemaining,
+        isRunning,
+        targetEndTime,
+        pomodorosCompleted,
+        timestamp: Date.now()
+    };
+    localStorage.setItem('timerState', JSON.stringify(state));
+}
+
+function clearTimerState() {
+    localStorage.removeItem('timerState');
+}
+
+function restoreTimerState() {
+    const saved = localStorage.getItem('timerState');
+    if (!saved) return false;
+    
+    try {
+        const state = JSON.parse(saved);
+        
+        // If timer was running, check if it should have ended
+        if (state.isRunning && state.targetEndTime) {
+            const now = Date.now();
+            const remainingMs = state.targetEndTime - now;
+            
+            if (remainingMs > 0) {
+                // Timer still running
+                currentPhase = state.currentPhase;
+                timeRemaining = Math.ceil(remainingMs / 1000);
+                pomodorosCompleted = state.pomodorosCompleted || 0;
+                updateDisplay();
+                updateModeButtons();
+                updateBodyStyle(currentPhase);
+                updateStartButton(currentPhase);
+                updateApplyButton(currentPhase);
+                
+                // Auto-resume timer
+                console.log('Resuming timer from background...');
+                startTimer();
+                return true;
+            } else {
+                // Timer should have ended while we were gone
+                console.log('Timer ended while in background');
+                currentPhase = state.currentPhase;
+                pomodorosCompleted = state.pomodorosCompleted || 0;
+                timeRemaining = 0;
+                clearTimerState();
+                handlePhaseEnd();
+                return true;
+            }
+        } else if (!state.isRunning) {
+            // Timer was paused, restore the paused state
+            currentPhase = state.currentPhase;
+            timeRemaining = state.timeRemaining;
+            pomodorosCompleted = state.pomodorosCompleted || 0;
+            updateDisplay();
+            updateModeButtons();
+            updateBodyStyle(currentPhase);
+            updateStartButton(currentPhase);
+            updateApplyButton(currentPhase);
+            return true;
+        }
+    } catch (error) {
+        console.error('Error restoring timer state:', error);
+        clearTimerState();
+    }
+    
+    return false;
 }
 
 function updateSessionStats() {
@@ -322,6 +412,12 @@ function handlePhaseEnd() {
         console.log('Audio not initialized yet. Timer sound:', !!timerSound, 'Audio unlocked:', audioUnlocked);
     }
 
+    // Save the completed phase BEFORE changing it
+    const completedPhase = currentPhase;
+    
+    // Determine next phase
+    let nextPhase = 'pomodoro';
+    
     if (currentPhase === 'pomodoro') {
         pomodorosCompleted++;
         sessionStats.pomodoros++;
@@ -333,20 +429,92 @@ function handlePhaseEnd() {
         }
         
         if (pomodorosCompleted % LONG_BREAK_TRIGGER === 0) {
+            nextPhase = 'longBreak';
             setPhase('longBreak');
         } else {
+            nextPhase = 'shortBreak';
             setPhase('shortBreak');
         }
     } else if (currentPhase === 'shortBreak') {
         sessionStats.shortBreaks++;
+        trackBreakComplete('shortBreak');
+        nextPhase = 'pomodoro';
         setPhase('pomodoro');
     } else if (currentPhase === 'longBreak') {
         sessionStats.longBreaks++;
+        trackBreakComplete('longBreak');
+        nextPhase = 'pomodoro';
         setPhase('pomodoro');
     }
     
+    // Show notification with the COMPLETED phase, not the new current phase
+    showCompletionNotification(completedPhase, nextPhase);
+    
     updateSessionStats();
     startTimer();
+}
+
+// Show completion notification using multiple methods
+async function showCompletionNotification(completedPhase, nextPhase) {
+    // Method 1: Try Service Worker notification (works in background)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        try {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'TIMER_COMPLETE',
+                phase: completedPhase,
+                nextPhase: nextPhase
+            });
+            console.log('Sent notification request to Service Worker');
+        } catch (error) {
+            console.error('Service Worker notification failed:', error);
+        }
+    }
+    
+    // Method 2: Direct Notification API (fallback, works if app is in foreground)
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            let title, body, icon;
+            
+            if (completedPhase === 'pomodoro') {
+                title = '🍅 Pomodoro Complete!';
+                body = nextPhase === 'longBreak' 
+                    ? 'Great work! Time for a long break (15 min).' 
+                    : 'Good job! Time for a short break (5 min).';
+                icon = './statIcon.png';
+            } else if (completedPhase === 'shortBreak') {
+                title = '☕ Short Break Complete!';
+                body = 'Ready to focus again? Time for another Pomodoro!';
+                icon = './settingsIcon.png';
+            } else if (completedPhase === 'longBreak') {
+                title = '🎉 Long Break Complete!';
+                body = 'Refreshed and ready to go! Let\'s start another cycle!';
+                icon = './settingsIcon.png';
+            }
+            
+            const notification = new Notification(title, {
+                body: body,
+                icon: icon,
+                badge: './statIcon.png',
+                vibrate: [200, 100, 200],
+                tag: 'pomodoro-timer',
+                requireInteraction: true,
+                silent: false
+            });
+            
+            // Auto-close after 10 seconds if not interacted with
+            setTimeout(() => notification.close(), 10000);
+            
+            // Focus app when notification is clicked
+            notification.onclick = () => {
+                window.focus();
+                notification.close();
+            };
+            
+            console.log('Direct notification shown');
+        } catch (error) {
+            console.error('Direct notification failed:', error);
+        }
+    }
 }
 
 // --- Phase Management ---
@@ -462,7 +630,8 @@ function loadAnalytics() {
         bestStreak: 0,
         currentStreak: 0,
         lastPomodoroDate: null,
-        dailyData: {}
+        dailyData: {},  // { dateString: { pomodoros: 0, shortBreaks: 0, longBreaks: 0 } }
+        dailyBreaks: {} // Backward compatibility, will be merged into dailyData
     };
 }
 
@@ -514,10 +683,28 @@ function drawChart() {
         const date = new Date(today);
         date.setDate(date.getDate() - daysToMonday + i);
         const dateStr = date.toDateString();
+        
+        // Support both old format (number) and new format (object)
+        const dayData = dailyData[dateStr];
+        let pomodoros = 0, shortBreaks = 0, longBreaks = 0;
+        
+        if (typeof dayData === 'number') {
+            // Old format: just pomodoro count
+            pomodoros = dayData;
+        } else if (dayData && typeof dayData === 'object') {
+            // New format: object with breakdown
+            pomodoros = dayData.pomodoros || 0;
+            shortBreaks = dayData.shortBreaks || 0;
+            longBreaks = dayData.longBreaks || 0;
+        }
+        
         last7Days.push({
             date: date,
             dateStr: dateStr,
-            count: dailyData[dateStr] || 0,
+            pomodoros: pomodoros,
+            shortBreaks: shortBreaks,
+            longBreaks: longBreaks,
+            total: pomodoros + shortBreaks + longBreaks,
             dayName: date.toLocaleDateString('en-US', { weekday: 'short' })
         });
     }
@@ -533,7 +720,7 @@ function drawChart() {
     const padding = 30;
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
-    const maxValue = Math.max(1, ...last7Days.map(d => d.count));
+    const maxValue = Math.max(1, ...last7Days.map(d => d.total));
     
     // Draw grid lines
     ctx.strokeStyle = '#e0e0e0';
@@ -546,27 +733,55 @@ function drawChart() {
         ctx.stroke();
     }
     
-    // Draw bars
+    // Colors for each type
+    const colors = {
+        pomodoro: '#3179b8',      // Blue for Pomodoros
+        shortBreak: '#2a6199',    // Darker Blue for Short Breaks
+        longBreak: '#22487a'      // Navy for Long Breaks
+    };
+    
+    // Draw stacked bars
     const barWidth = chartWidth / last7Days.length;
     last7Days.forEach((day, index) => {
-        const barHeight = (day.count / maxValue) * chartHeight;
         const x = padding + index * barWidth;
-        const y = padding + chartHeight - barHeight;
+        const barPadding = 5;
+        const actualBarWidth = barWidth - (barPadding * 2);
         
-        // Gradient for bars
-        const gradient = ctx.createLinearGradient(x, padding, x, y + barHeight);
-        gradient.addColorStop(0, '#3179b8');
-        gradient.addColorStop(1, '#2a6199');
+        // Calculate heights for each segment
+        const pomodoroHeight = day.total > 0 ? (day.pomodoros / maxValue) * chartHeight : 0;
+        const shortBreakHeight = day.total > 0 ? (day.shortBreaks / maxValue) * chartHeight : 0;
+        const longBreakHeight = day.total > 0 ? (day.longBreaks / maxValue) * chartHeight : 0;
         
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x + 5, y, barWidth - 10, barHeight);
+        // Start from bottom of chart
+        let currentY = padding + chartHeight;
         
-        // Draw number labels on top of bars
-        if (day.count > 0) {
+        // Draw Long Breaks (bottom layer)
+        if (day.longBreaks > 0) {
+            currentY -= longBreakHeight;
+            ctx.fillStyle = colors.longBreak;
+            ctx.fillRect(x + barPadding, currentY, actualBarWidth, longBreakHeight);
+        }
+        
+        // Draw Short Breaks (middle layer)
+        if (day.shortBreaks > 0) {
+            currentY -= shortBreakHeight;
+            ctx.fillStyle = colors.shortBreak;
+            ctx.fillRect(x + barPadding, currentY, actualBarWidth, shortBreakHeight);
+        }
+        
+        // Draw Pomodoros (top layer)
+        if (day.pomodoros > 0) {
+            currentY -= pomodoroHeight;
+            ctx.fillStyle = colors.pomodoro;
+            ctx.fillRect(x + barPadding, currentY, actualBarWidth, pomodoroHeight);
+        }
+        
+        // Draw total count label on top of bar
+        if (day.total > 0) {
             ctx.fillStyle = '#3179b8';
             ctx.font = 'bold 11px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(day.count, x + barWidth / 2, y - 5);
+            ctx.fillText(day.total, x + barWidth / 2, currentY - 5);
         }
         
         // Draw day labels at bottom
@@ -575,6 +790,30 @@ function drawChart() {
         ctx.textAlign = 'center';
         ctx.fillText(day.dayName, x + barWidth / 2, height - 5);
     });
+    
+    // Draw legend
+    const legendY = padding - 15;
+    const legendX = width - padding - 200;
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'left';
+    
+    // Pomodoros
+    ctx.fillStyle = colors.pomodoro;
+    ctx.fillRect(legendX, legendY, 12, 12);
+    ctx.fillStyle = '#666';
+    ctx.fillText('Pomodoros', legendX + 16, legendY + 10);
+    
+    // Short Breaks
+    ctx.fillStyle = colors.shortBreak;
+    ctx.fillRect(legendX + 80, legendY, 12, 12);
+    ctx.fillStyle = '#666';
+    ctx.fillText('Short', legendX + 96, legendY + 10);
+    
+    // Long Breaks
+    ctx.fillStyle = colors.longBreak;
+    ctx.fillRect(legendX + 130, legendY, 12, 12);
+    ctx.fillStyle = '#666';
+    ctx.fillText('Long', legendX + 146, legendY + 10);
 }
 
 function trackPomodoroComplete() {
@@ -583,10 +822,20 @@ function trackPomodoroComplete() {
     analytics.todayPomodoros++;
     analytics.totalTime += TIMES.pomodoro;
     
-    // Track daily data for charts
+    // Track daily data for charts (new object format)
     const today = new Date().toDateString();
     if (!analytics.dailyData) analytics.dailyData = {};
-    analytics.dailyData[today] = (analytics.dailyData[today] || 0) + 1;
+    
+    // Initialize day data if needed
+    if (!analytics.dailyData[today]) {
+        analytics.dailyData[today] = { pomodoros: 0, shortBreaks: 0, longBreaks: 0 };
+    } else if (typeof analytics.dailyData[today] === 'number') {
+        // Convert old format to new format
+        const oldCount = analytics.dailyData[today];
+        analytics.dailyData[today] = { pomodoros: oldCount, shortBreaks: 0, longBreaks: 0 };
+    }
+    
+    analytics.dailyData[today].pomodoros++;
     
     // Update streak
     if (analytics.lastPomodoroDate !== today) {
@@ -616,6 +865,33 @@ function trackPomodoroComplete() {
     } else {
         console.log('Supabase integration not available');
     }
+}
+
+function trackBreakComplete(breakType) {
+    const analytics = loadAnalytics();
+    
+    // Track daily data for charts
+    const today = new Date().toDateString();
+    if (!analytics.dailyData) analytics.dailyData = {};
+    
+    // Initialize day data if needed
+    if (!analytics.dailyData[today]) {
+        analytics.dailyData[today] = { pomodoros: 0, shortBreaks: 0, longBreaks: 0 };
+    } else if (typeof analytics.dailyData[today] === 'number') {
+        // Convert old format to new format
+        const oldCount = analytics.dailyData[today];
+        analytics.dailyData[today] = { pomodoros: oldCount, shortBreaks: 0, longBreaks: 0 };
+    }
+    
+    if (breakType === 'shortBreak') {
+        analytics.dailyData[today].shortBreaks++;
+    } else if (breakType === 'longBreak') {
+        analytics.dailyData[today].longBreaks++;
+    }
+    
+    saveAnalytics(analytics);
+    updateAnalyticsDisplay();
+    drawChart();
 }
 
 function resetStats() {
@@ -689,27 +965,98 @@ if (savedSettings) {
 }
 
 // Initial setup
-setPhase('pomodoro');
+// Try to restore timer state first (in case user closed and reopened app)
+const wasRestored = restoreTimerState();
+
+if (!wasRestored) {
+    // No saved state, start fresh
+    setPhase('pomodoro');
+}
+
 updateAnalyticsDisplay();
 updateSessionStats();
 
-// Initialize Supabase when page loads
-window.addEventListener('load', async () => {
-    if (window.SupabaseIntegration) {
-        const initialized = await window.SupabaseIntegration.init();
-        if (initialized) {
-            console.log('Supabase integration ready');
-        } else {
-            console.log('Supabase integration not available - using local storage only');
+// Register Service Worker for background support and notifications
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('./service-worker.js');
+            console.log('Service Worker registered successfully:', registration.scope);
+            
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                console.log('Notification permission:', permission);
+            }
+        } catch (error) {
+            console.log('Service Worker registration failed:', error);
         }
-    }
-});
+        
+        // Initialize Supabase
+        if (window.SupabaseIntegration) {
+            const initialized = await window.SupabaseIntegration.init();
+            if (initialized) {
+                console.log('Supabase integration ready');
+            } else {
+                console.log('Supabase integration not available - using local storage only');
+            }
+        }
+    });
+} else {
+    // Fallback if Service Worker not supported
+    window.addEventListener('load', async () => {
+        if (window.SupabaseIntegration) {
+            const initialized = await window.SupabaseIntegration.init();
+            if (initialized) {
+                console.log('Supabase integration ready');
+            } else {
+                console.log('Supabase integration not available - using local storage only');
+            }
+        }
+    });
+}
 
-// Handle visibility change to re-request wake lock if needed
+// Handle visibility change to re-request wake lock and sync timer
 document.addEventListener('visibilitychange', async () => {
-    if (!document.hidden && isRunning && !wakeLock) {
-        // Page is visible again, timer is running, but wake lock was released
-        // Re-request wake lock
-        requestWakeLock();
+    if (!document.hidden) {
+        // Page is visible again
+        console.log('App returned to foreground');
+        
+        // Check if timer state needs to be synced
+        const saved = localStorage.getItem('timerState');
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                
+                if (state.isRunning && state.targetEndTime) {
+                    const now = Date.now();
+                    const remainingMs = state.targetEndTime - now;
+                    
+                    if (remainingMs > 0) {
+                        // Update display with actual remaining time
+                        timeRemaining = Math.ceil(remainingMs / 1000);
+                        updateDisplay();
+                        updateProgressBar();
+                        console.log('Timer synced:', timeRemaining, 'seconds remaining');
+                    } else if (remainingMs <= 0 && isRunning) {
+                        // Timer ended while in background
+                        console.log('Timer ended in background, completing phase');
+                        clearInterval(timerInterval);
+                        isRunning = false;
+                        timeRemaining = 0;
+                        targetEndTime = null;
+                        clearTimerState();
+                        handlePhaseEnd();
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing timer:', error);
+            }
+        }
+        
+        // Re-request wake lock if needed
+        if (isRunning && !wakeLock) {
+            requestWakeLock();
+        }
     }
 });
