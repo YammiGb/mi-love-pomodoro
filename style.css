@@ -388,8 +388,8 @@ h1 {
 
 #stats-chart {
     width: 100%;
-    height: 150px;
-    max-height: 150px;
+    height: 180px;
+    max-height: 180px;
 }
 
 #reset-stats-btn {
@@ -402,6 +402,76 @@ h1 {
     font-weight: bold;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     width: 100%;
+}
+
+/* Chart Tooltip Styles */
+.chart-tooltip {
+    position: fixed;
+    background: white;
+    border: 2px solid #3179b8;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    min-width: 180px;
+    pointer-events: none;
+    animation: tooltipFadeIn 0.2s ease;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.tooltip-header {
+    font-weight: bold;
+    font-size: 14px;
+    color: #3179b8;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: 12px;
+    color: #333;
+}
+
+.tooltip-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.tooltip-label {
+    flex: 1;
+    color: #666;
+}
+
+.tooltip-value {
+    font-weight: bold;
+    color: #333;
+}
+
+.tooltip-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e0e0e0;
+    font-weight: bold;
+    font-size: 13px;
+    color: #3179b8;
+    text-align: right;
 }
 
 .main-timer {
@@ -943,7 +1013,7 @@ h1 {
     }
     
     #stats-chart {
-        height: 120px;
+        height: 150px;
     }
     
     /* Modal and form improvements for mobile */

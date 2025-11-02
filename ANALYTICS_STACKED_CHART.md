@@ -9,17 +9,19 @@ The analytics chart now displays **Pomodoros, Short Breaks, and Long Breaks** al
 ## 📊 **Visual Layout**
 
 ```
-                    Total
-                      │
-        ┌─────────────┼─────────────┐
-        │             │             │
-        │  Pomodoros  │  (Top)      │  #3179b8 (Blue)
-        ├─────────────┤             │
-        │ Short Break │  (Middle)   │  #2a6199 (Darker Blue)
-        ├─────────────┤             │
-        │ Long Break  │  (Bottom)   │  #22487a (Navy)
-        └─────────────┴─────────────┘
-             Mon            Tue
+   10 ─                     Total
+    8 ─                       │
+    6 ─        ┌─────────────┼─────────────┐
+    4 ─        │             │             │
+    2 ─        │  Pomodoros  │  (Top)      │  #3179b8 (Blue)
+    0 ─        ├─────────────┤             │
+               │ Short Break │  (Middle)   │  #2a6199 (Darker Blue)
+               ├─────────────┤             │
+               │ Long Break  │  (Bottom)   │  #22487a (Navy)
+               └─────────────┴─────────────┘
+                    Mon            Tue
+                    
+               ■ Pomodoros  ■ Short  ■ Long
 ```
 
 ---
@@ -44,18 +46,19 @@ The analytics chart now displays **Pomodoros, Short Breaks, and Long Breaks** al
 ### **X-Axis (Horizontal)**
 - Shows **days of the week** (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
 - Displays current week (Monday to Sunday)
-- Day labels at bottom of each bar
+- Day labels positioned below the bars
 
 ### **Y-Axis (Vertical)**
-- Represents **count** of activities
+- Shows **numerical count** on the left side
+- Represents total activities (Pomodoros + Breaks)
 - Auto-scales based on maximum daily total
-- Grid lines every 20% for easy reading
+- Grid lines with corresponding numbers for easy reading
 
 ### **Each Bar Shows:**
 1. **Height** = Total activities for that day
 2. **Colors** = Breakdown by type (stacked)
 3. **Number on top** = Total count
-4. **Legend at top** = Color key
+4. **Legend at bottom** = Color key (centered below days)
 
 ---
 
@@ -137,15 +140,16 @@ The analytics chart now displays **Pomodoros, Short Breaks, and Long Breaks** al
 
 ---
 
-## 📊 **Legend (Top of Chart)**
+## 📊 **Legend (Bottom of Chart)**
 
 ```
 ■ Pomodoros    ■ Short    ■ Long
 ```
 
-- **Always visible** at top of chart
+- **Always visible** below the day labels
+- Centered for easy reading
 - Quick reference for colors
-- No guessing needed
+- Clean layout, doesn't obstruct chart
 
 ---
 

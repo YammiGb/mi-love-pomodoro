@@ -718,15 +718,20 @@ function drawChart() {
     canvas.height = height;
     
     const padding = 30;
+    const paddingBottom = 45; // More space for day labels and legend
     const chartWidth = width - padding * 2;
-    const chartHeight = height - padding * 2;
+    const chartHeight = height - padding - paddingBottom;
     const maxValue = Math.max(1, ...last7Days.map(d => d.total));
     
-    // Draw grid lines
+    // Draw grid lines (no Y-axis labels)
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 5; i++) {
-        const y = padding + (chartHeight / 5) * i;
+    
+    const gridLines = 5;
+    for (let i = 0; i <= gridLines; i++) {
+        const y = padding + (chartHeight / gridLines) * i;
+        
+        // Draw grid line
         ctx.beginPath();
         ctx.moveTo(padding, y);
         ctx.lineTo(width - padding, y);
@@ -739,6 +744,9 @@ function drawChart() {
         shortBreak: '#2a6199',    // Darker Blue for Short Breaks
         longBreak: '#22487a'      // Navy for Long Breaks
     };
+    
+    // Store bar positions for tap detection
+    const barPositions = [];
     
     // Draw stacked bars
     const barWidth = chartWidth / last7Days.length;
@@ -754,6 +762,15 @@ function drawChart() {
         
         // Start from bottom of chart
         let currentY = padding + chartHeight;
+        
+        // Store bar position and data for click detection
+        barPositions.push({
+            x: x + barPadding,
+            y: padding,
+            width: actualBarWidth,
+            height: chartHeight,
+            day: day
+        });
         
         // Draw Long Breaks (bottom layer)
         if (day.longBreaks > 0) {
@@ -784,36 +801,39 @@ function drawChart() {
             ctx.fillText(day.total, x + barWidth / 2, currentY - 5);
         }
         
-        // Draw day labels at bottom
+        // Draw day labels at bottom (below chart area)
         ctx.fillStyle = '#666';
-        ctx.font = '10px Arial';
+        ctx.font = '11px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(day.dayName, x + barWidth / 2, height - 5);
+        ctx.fillText(day.dayName, x + barWidth / 2, padding + chartHeight + 15);
     });
     
-    // Draw legend
-    const legendY = padding - 15;
-    const legendX = width - padding - 200;
-    ctx.font = '10px Arial';
+    // Draw legend below the day labels - larger and more visible
+    const legendY = padding + chartHeight + 28;
+    const legendStartX = (width - 220) / 2; // Center the legend
+    ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'left';
     
     // Pomodoros
     ctx.fillStyle = colors.pomodoro;
-    ctx.fillRect(legendX, legendY, 12, 12);
-    ctx.fillStyle = '#666';
-    ctx.fillText('Pomodoros', legendX + 16, legendY + 10);
+    ctx.fillRect(legendStartX, legendY, 16, 16);
+    ctx.fillStyle = '#333';
+    ctx.fillText('Pomodoros', legendStartX + 22, legendY + 12);
     
     // Short Breaks
     ctx.fillStyle = colors.shortBreak;
-    ctx.fillRect(legendX + 80, legendY, 12, 12);
-    ctx.fillStyle = '#666';
-    ctx.fillText('Short', legendX + 96, legendY + 10);
+    ctx.fillRect(legendStartX + 95, legendY, 16, 16);
+    ctx.fillStyle = '#333';
+    ctx.fillText('Short', legendStartX + 117, legendY + 12);
     
     // Long Breaks
     ctx.fillStyle = colors.longBreak;
-    ctx.fillRect(legendX + 130, legendY, 12, 12);
-    ctx.fillStyle = '#666';
-    ctx.fillText('Long', legendX + 146, legendY + 10);
+    ctx.fillRect(legendStartX + 160, legendY, 16, 16);
+    ctx.fillStyle = '#333';
+    ctx.fillText('Long', legendStartX + 182, legendY + 12);
+    
+    // Store bar positions globally for click handling
+    canvas.dataset.barPositions = JSON.stringify(barPositions);
 }
 
 function trackPomodoroComplete() {
@@ -915,6 +935,106 @@ function toggleAnalyticsPanel() {
         // Timer keeps running while viewing analytics
     }
 }
+
+// Handle chart bar clicks to show detailed breakdown
+function handleChartClick(event) {
+    const canvas = document.getElementById('stats-chart');
+    if (!canvas || !canvas.dataset.barPositions) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    const barPositions = JSON.parse(canvas.dataset.barPositions);
+    
+    // Check if click is on any bar
+    for (const bar of barPositions) {
+        if (x >= bar.x && x <= bar.x + bar.width && 
+            y >= bar.y && y <= bar.y + bar.height) {
+            showBarDetails(bar.day, event.clientX, event.clientY);
+            return;
+        }
+    }
+    
+    // Click outside bars, hide tooltip
+    hideBarDetails();
+}
+
+// Show detailed breakdown tooltip
+function showBarDetails(day, mouseX, mouseY) {
+    // Remove existing tooltip
+    hideBarDetails();
+    
+    if (day.total === 0) return; // Don't show for empty days
+    
+    // Create tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'chart-tooltip';
+    tooltip.className = 'chart-tooltip';
+    
+    tooltip.innerHTML = `
+        <div class="tooltip-header">${day.dayName}</div>
+        <div class="tooltip-row">
+            <span class="tooltip-color" style="background: #3179b8;"></span>
+            <span class="tooltip-label">Pomodoros:</span>
+            <span class="tooltip-value">${day.pomodoros}</span>
+        </div>
+        <div class="tooltip-row">
+            <span class="tooltip-color" style="background: #2a6199;"></span>
+            <span class="tooltip-label">Short Breaks:</span>
+            <span class="tooltip-value">${day.shortBreaks}</span>
+        </div>
+        <div class="tooltip-row">
+            <span class="tooltip-color" style="background: #22487a;"></span>
+            <span class="tooltip-label">Long Breaks:</span>
+            <span class="tooltip-value">${day.longBreaks}</span>
+        </div>
+        <div class="tooltip-total">Total: ${day.total}</div>
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Position tooltip near click point
+    const tooltipRect = tooltip.getBoundingClientRect();
+    let left = mouseX + 10;
+    let top = mouseY - tooltipRect.height / 2;
+    
+    // Keep tooltip on screen
+    if (left + tooltipRect.width > window.innerWidth) {
+        left = mouseX - tooltipRect.width - 10;
+    }
+    if (top < 0) top = 10;
+    if (top + tooltipRect.height > window.innerHeight) {
+        top = window.innerHeight - tooltipRect.height - 10;
+    }
+    
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+}
+
+// Hide tooltip
+function hideBarDetails() {
+    const tooltip = document.getElementById('chart-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
+}
+
+// Add chart click listener
+const statsChart = document.getElementById('stats-chart');
+if (statsChart) {
+    statsChart.addEventListener('click', handleChartClick);
+    statsChart.style.cursor = 'pointer';
+}
+
+// Hide tooltip when clicking outside or scrolling
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#stats-chart') && !e.target.closest('.chart-tooltip')) {
+        hideBarDetails();
+    }
+});
+
+document.addEventListener('scroll', hideBarDetails, true);
 
 // --- Event Listeners ---
 
